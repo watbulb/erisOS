@@ -2,46 +2,45 @@
 ## ErisOS Project Makefile
 #
 
-OUTPUT := build
+export PRODUCT := ErisOS
+export TARGET_PRODUCT_OUTPUT := $(CURDIR)/build
 
-# TODO: Extend to fit a `core` general component
 COMPONENTS := \
-	core/S3
+	core
 #   ... (extend as appropriate)
 #   ...
+
 
 #
 ## [Default OS Component Compile Options]
 ##
-export CC     := $(shell xcrun -f clang)
+export CC     ?= $(shell xcrun -f clang)
 export ABI    ?= aapcs
 export ARCH   ?= arm64
-export CFLAGS ?= -fno-color-diagnostics
+export CFLAGS ?= -fno-color-diagnostics -std=c17
 export WFLAGS ?= -Wall -Wpedantic -Wconversion 
 
 
-all: $(OUTPUT) $(COMPONENTS)
+erisos: all
+ErisOS: all
+all: $(TARGET_PRODUCT_OUTPUT) $(COMPONENTS)
 
-#
-## [OS Build Obj Aggregation Path]
-##
-(OUTPUT):
+$(TARGET_PRODUCT_OUTPUT):
 	mkdir -p $@
 
 #
 ## [OS Components]
 ##
-$(COMPONENTS): $(OUTPUT)
+$(COMPONENTS): $(TARGET_PRODUCT_OUTPUT)
 	$(MAKE) -C $@
-	ln -s $@/obj $^/$@_obj
+	@mkdir -p $^/$@ && ln -s $(CURDIR)/$@/obj $^/$@
 
-clean: $(OUTPUT)
+clean: $(TARGET_PRODUCT_OUTPUT)
 	$(foreach comp,$(COMPONENTS),\
 		$(MAKE) -C $(comp) $@)
 	rm -rf $^
 
 
 ## META
-.PHONY: $(OUTPUT)
 .POSIX:
 .DEFAULT: all

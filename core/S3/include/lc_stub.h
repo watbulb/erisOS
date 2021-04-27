@@ -1,7 +1,8 @@
 #ifndef LIBC_STUB_H
 #define LIBC_STUB_H
 
-#ifdef USE_LIBC_STUB
+#if 1
+// #ifdef USE_LIBC_STUB
 char* strcpy_(char* to, const char* from)
 {
     char cur = 0;
@@ -12,9 +13,12 @@ char* strcpy_(char* to, const char* from)
     return to;
 }
 
-const void* memcpy_(char* dst, const char* src, unsigned long n)
+const void* memcpy_(char* dst, char* src, unsigned long n)
 {
-    while (n) { *dst++ = *src++; n--; }
+    while (n) {
+        *dst++ = *src++;
+        n--;
+    }
     // XXX: note `dst` returned, non ISO
     return dst;
 }

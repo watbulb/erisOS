@@ -1,5 +1,5 @@
 #
-## ErisOS Base (Root) Component
+## ErisOS Checkra1n Stage3 Component
 #
 
 #
@@ -52,7 +52,7 @@ DFLAGS := $(DFLAGS) \
 	-DAUTOBOOT=$(AUTOBOOT) \
 	-DUSE_LIBC_STUB=$(USE_LIBC_STUB)
 CFLAGS := $(CFLAGS)	\
-	-O0				\
+	-O0		\
 	-arch $(ARCH)	\
 	-mabi=$(ABI)    \
 	-fno-builtin	\
@@ -60,14 +60,14 @@ CFLAGS := $(CFLAGS)	\
 SFLAGS := $(SFLAGS) $(CFLAGS)
 IFLAGS := $(IFLAGS) -I$(INC)
 LFLAGS := $(LFLAGS)	\
-	-nostdlib		\
+	-nostdlib	\
 	-nostdlibinc	\
 	-Wl,-preload	\
 	-Wl,-e,start    \
 	-Wl,-order_file,$(SRC)/sym_order.txt \
-	-Wl,-image_base,0x100000000 		 \
-	-Wl,-sectalign,__DATA,__common,0x8 	 \
-	-Wl,-segalign,0x4000 				 \
+	-Wl,-image_base,0x100000000	     \
+	-Wl,-sectalign,__DATA,__common,0x8   \
+	-Wl,-segalign,0x4000 		     \
 
 
 #

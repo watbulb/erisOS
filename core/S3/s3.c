@@ -1,44 +1,47 @@
-/* 
- * pongoOS - https://checkra.in
- * 
- * Copyright (C) 2019-2021 checkra1n team
- *
- * This file is part of pongoOS.
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- * 
- * The above copyright notice and this permission notice shall be included in all
- * copies or substantial portions of the Software.
- * 
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
- * SOFTWARE.
- * 
- */
-
-// #include <pongo.h>
 #include <stdint.h>
-#include "lc_stub.h"
+#include "include/s3.h"
 
-extern uint32_t tramp_hook[5];
+uint64_t   exception_stack[0x4000/8] = {1};
+uint64_t   sched_stack[0x4000/8] = {1};
 
-volatile void jump_to_image(uint64_t image, uint64_t args);
-volatile void d$demote_patch(void * image);
+#if   ERISOS_ARM_RUNLEVEL == EL3_RUNLEVEL
+/*! Entrypoint for EL3 Hypervisor Runtime */
+void runtime_entry(uintptr_t *boot_args, uintptr_t *boot_entrypoint) {
+    hypervisor_entry(boot_args, boot_entrypoint);
+    runtime_exit(boot_args, boot_entrypoint);
+}
+#elif ERISOS_ARM_RUNLEVEL == EL2_RUNLEVEL
+/*! Entrypoint for EL2 Bootloader Runtime */
+void runtime_entry(uintptr_t *boot_args, uintptr_t *boot_entrypoint) {
+    bootloader_entry(boot_args, boot_entrypoint);
+    runtime_exit(boot_args, boot_entrypoint);
+}
+#elif ERISOS_ARM_RUNLEVEL == EL1_RUNLEVEL
+/*! Entrypoint for EL1 Kernel Runtime     */
+void runtime_entry(uintptr_t *boot_args, uintptr_t *boot_entrypoint) {
+    // kernel_entry(boot_args, boot_entrypoint);
+    runtime_exit(boot_args, boot_entrypoint);
+}
+#else
+#error "Unknown ERISOS_ARM_RUNLEVEL"
+#endif
 
-void iorvbar_yeet(const volatile void *ro, volatile void *rw) __asm__("iorvbar_yeet");
-void aes_keygen(const volatile void *ro, volatile void *rw) __asm__("aes_keygen");
-void recfg_yoink(const volatile void *ro, volatile void *rw) __asm__("recfg_yoink");
 
-uint32_t* find_next_insn(uint32_t* from, uint32_t size, uint32_t insn, uint32_t mask)
+void runtime_exit(uintptr_t *boot_entrypoint, uintptr_t *boot_args) {
+    jump_to_image((uint64_t)boot_entrypoint, (uint64_t)boot_args);
+}
+
+
+/* 
+_start -> .trampoline_entry(x0(x9), x1) -> \
+patch_bootloader(x0(x9)) -> disable DRAM clear -> \
+for i++ in (5): tramp_ins[i] = tramp_hook[i] -> \
+iorvbar_yeet -> aes_keygen -> invalidate_icache -> \
+hooks run -> gboot* = boot* -> memset(bss_start, 0, end) -> \
+setup_runlevel/el1(jump_to_runtime_entry) -> blr jump_to_runtime_entry if currentel != 3 -> jump_to_runtime_entry -> l1_kernel_entry
+*/
+
+uintptr_t* find_next_insn(uintptr_t* from, uint32_t size, uint32_t insn, uint32_t mask)
 {
     while (size) {
         if ((*from & mask) == (insn & mask)) {
@@ -49,105 +52,121 @@ uint32_t* find_next_insn(uint32_t* from, uint32_t size, uint32_t insn, uint32_t 
     }
     return NULL;
 }
-uint32_t* find_prev_insn(uint32_t* from, uint32_t size, uint32_t insn, uint32_t mask)
+uintptr_t* find_prev_insn(uintptr_t* from, uint32_t size, uint32_t insn, uint32_t mask)
 {
     while (size) {
-        if ((*from & mask) == (insn & mask)) {
+        if ((*from & mask) == (insn & mask))
             return from;
-        }
+ 
         from--;
         size -= 4;
     }
     return NULL;
 }
 
-extern uint32_t clear_hook_orig_backing[2];
-extern uint8_t clear_hook, clear_hook_end;
 
-void patch_bootloader(void* boot_image)
-{
-    // 1. disable DRAM clear
+void patch_bootloader(uintptr_t *boot_image) {
 
-    uint32_t* sys_3_c7_c4_1 = find_next_insn(boot_image, 0x80000, 0xd50b7423, 0xFFFFFFFF);
-    if (sys_3_c7_c4_1) {
-        uint32_t* func_prolog = find_prev_insn(sys_3_c7_c4_1, 0x100, 0xaa0103e2, 0xffffffff);
-        if (func_prolog) {
-            for (int i = 0; i < 2; i++) {
-                clear_hook_orig_backing[i] = func_prolog[i];
-            }
-            memcpy(((void*)0x180 + (uint64_t)boot_image), &clear_hook, &clear_hook_end - &clear_hook);
-            int64_t offset = (0x180 + (int64_t)boot_image) - (4 + (int64_t)func_prolog);
-            func_prolog[0] = 0xaa1e03e5;
-            func_prolog[1] = 0x94000000 | ((((uint64_t)offset) >> 2) & 0x3FFFFFF);
-        }
-    }
-    invalidate_icache();
+    if (!boot_image)
+        return;
 
-    // 2. hook trampoline to jump into this again
-
-    uint32_t* tramp = find_next_insn(boot_image, 0x80000, 0xd2800012, 0xFFFFFFFF);
-    if (tramp) {
-        for (int i = 0; i < 5; i++) {
-            tramp[i] = tramp_hook[i];
-        }
-    }
-//    d$demote_patch(boot_image);
-
-    iorvbar_yeet(boot_image, boot_image);
-    aes_keygen(boot_image, boot_image);
-    // Ultra yolo hack: 16K support = Reconfig Engine
-    if(is_16k())
+    /*
+     ** Disable DRAM Clear
+     */
     {
-        recfg_yoink(boot_image, boot_image);
+        uintptr_t *sys_3_c7_c4_1 = find_next_insn(boot_image, // from
+            0x80000,    // size
+            0xd50b7423, // inst
+            0xFFFFFFFF  // mask 
+        );
+        if (sys_3_c7_c4_1) {
+            uintptr_t *func_prolog = find_prev_insn(sys_3_c7_c4_1,
+                0x100,      // size
+                0xaa0103e2, // inst
+                0xFFFFFFFF  // mask
+            );
+            if (func_prolog) {
+                int64_t offset = (0x180 + (uint64_t)boot_image) - (0x4 + (int64_t)func_prolog);
+                clear_hook_orig_backing[0] = func_prolog[0];
+                clear_hook_orig_backing[1] = func_prolog[1];
+                memcpy((void *)0x180 + (uint64_t)boot_image,
+                       (void *)&clear_hook, &clear_hook_end - &clear_hook); 
+                func_prolog[0] = 0xaa1e03e5;
+                func_prolog[1] = 0x94000000 | (((uint64_t)offset >> 2) & 0x3FFFFFF);
+            }
+        }
+        // TODO: invalidate_icache();
     }
 
-    invalidate_icache();
-}
-
-/* BSS is cleaned on _start, so we cannot rely on it. */
-void* gboot_entry_point = (void*)0xddeeaaddbbeeeeff;
-void* gboot_args = (void*)0xddeeaaddbbeeeeff;
-
-void stage3_exit_to_el1_image(void* boot_args, void* boot_entry_point) {
-    if (*(uint8_t*)(gboot_args + 8 + 7)) {
-        // kernel
-        gboot_args = boot_args;
-        gboot_entry_point = boot_entry_point;
-    } else {
-        // hypv
-        *(void**)(gboot_args + 0x20) = boot_args;
-        *(void**)(gboot_args + 0x28) = boot_entry_point;
-        asm("smc #0"); // elevate to EL3
+    /*
+     ** Create Trampoline Hooks
+     */
+    {
+        uintptr_t *tramp = find_next_insn(boot_image,
+            0x80000,
+            0xd2800012,
+            0xFFFFFFFF
+        );
+        if (tramp) {
+            tramp[0] = tramp_hook[0];
+            tramp[1] = tramp_hook[1];
+            tramp[2] = tramp_hook[2];
+            tramp[3] = tramp_hook[3];
+            tramp[4] = tramp_hook[4];
+        }
+        // TODO: invalidate_icache();
     }
-    jump_to_image((uint64_t)gboot_entry_point, (uint64_t)gboot_args);
 }
 
-void trampoline_entry(void* boot_image, void* boot_args)
-{
-    extern uint64_t __bss_start[] __asm__("section$start$__DATA$__common"),
-                    __bss_end[] __asm__("segment$end$__DATA");
-    if (__bss_start[0] == 0x746F6F626F747561) {
-        uint32_t autoboot_sz = (uint32_t)(__bss_start[1]);
-        extern volatile void smemcpy128(void*,void*,uint32_t);
-        smemcpy128 ((void*)0x819000000, __bss_start, (autoboot_sz + 64)/16);
+
+void jump_to_runtime(void) {
+    if (!gboot_entry_point || !gboot_args)
+        ;
+    switch (ERISOS_ARM_RUNLEVEL) {
+        case EL3_RUNLEVEL:
+        case EL2_RUNLEVEL:
+            // XXX: Minor prejump setup/adjustments
+            break;
+        case EL1_RUNLEVEL:
+            runtime_entry(gboot_entry_point, gboot_args);
+            break;
+        default:
+            break;        
+    }
+}
+
+
+void setup_runlevel(uint8_t runlevel) {
+    if (!gboot_entry_point || !gboot_args)
+        ;
+    switch (runlevel) {
+        case EL3_RUNLEVEL:
+        case EL2_RUNLEVEL:
+            break;
+        case EL1_RUNLEVEL:
+            setup_el1(jump_to_runtime,
+                (uint64_t)gboot_entry_point,
+                (uint64_t)gboot_args);
+            break;
+         default:
+            break;
+    }
+}
+
+void trampoline_entry(uintptr_t *boot_image, uintptr_t *boot_args) {
+    if (__bss_start[0] == 0x746F6F626F737561) {
+        void *copy_zone = (void*)0x819000000;
+        const uint32_t autoboot_sz  = (__bss_start[1]);
+        smemcpy128(copy_zone, __bss_start, (autoboot_sz + 64)/16);
         __bss_start[0] = 0;
     }
-
     if (!boot_args) {
-        // bootloader
-        strcpy(boot_image + 0x200, "Stage2 KJC Loader");
+        strcpy((char *)boot_image + 0x200, "Stage 2 ErisOS Loader");
         patch_bootloader(boot_image);
     } else {
-        
         gboot_args = boot_args;
         gboot_entry_point = boot_image;
-        extern volatile void setup_el1(void * entryp,uint64_t,uint64_t);
-        
-        
-        extern volatile void smemset(void*, uint8_t, uint64_t);
-        smemset(&__bss_start, 0, ((uint64_t)__bss_end) - ((uint64_t)__bss_start));
-        extern void main (void);
-        setup_el1(main, (uint64_t)boot_image, (uint64_t)boot_args);
+        setup_runlevel(ERISOS_ARM_RUNLEVEL);
     }
-    jump_to_image((uint64_t)boot_image, (uint64_t)boot_args);
 }
+

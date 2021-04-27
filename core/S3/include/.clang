@@ -1,0 +1,1 @@
+-std=c17 -fno-builtin -fno-common -nostdlib -nostdlibinc -arch arm64 -mabi=aapcs -O0 -DUSE_LIBC_STUB
