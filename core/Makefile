@@ -6,17 +6,14 @@ rwildcard = $(foreach d,$(wildcard $(1:=/*)),$(call rwildcard,$d,$2) $(filter $(
 
 #
 ## [Core Default General Options]
-## TODO: Streamline
-ABI  ?= aapcs
-ARCH ?= arm64
 AUTOBOOT ?= 1
 USE_LIBC_STUB ?= 1
 
 
 #
-## [Core Image]
+## [Core TARGET]
 ##
-IMAGE_BIN ?= $(TARGET_PRODUCT_OUTPUT)/ErisOS.bin
+CORE_TARGET ?= $(TARGET_PRODUCT_BINARY)
 
 
 #
@@ -37,48 +34,56 @@ INC := $(CURDIR)/include
 
 #
 ## [Core Compiler Options]
+## [inherits parent & propogates newopts. down to components]
 ##
-WFLAGS := $(WFLAGS)
-DFLAGS := $(DFLAGS) \
-	-DAUTOBOOT=$(AUTOBOOT) \
+export WFLAGS := $(WFLAGS)
+export DFLAGS := $(DFLAGS) $\
+	-DAUTOBOOT=$(AUTOBOOT) $\
 	-DUSE_LIBC_STUB=$(USE_LIBC_STUB)
-CFLAGS := $(CFLAGS)	\
-	-O0		\
-	-arch $(ARCH)	\
-	-mabi=$(ABI)    \
-	-fno-builtin	\
-	-fno-common 
-SFLAGS := $(SFLAGS) $(CFLAGS)
-IFLAGS := $(IFLAGS) -I$(INC)
-LFLAGS := $(LFLAGS)	\
-	-nostdlib	\
-	-Wl,-preload	\
-	-Wl,-e,start    \
-	-Wl,-order_file,$(CURDIR)/sym_order.txt \
-	-Wl,-image_base,0x100000000	        \
-	-Wl,-sectalign,__DATA,__common,0x8      \
-	-Wl,-segalign,0x4000 		        \
+export CFLAGS := $(CFLAGS) $\
+	-O0 $\
+	-fno-builtin $\
+	-fno-common  $\
+	-fno-lto
+export SFLAGS := $(SFLAGS) $(CFLAGS)
+export IFLAGS := $(IFLAGS) -I$(INC)
+LFLAGS := $(LFLAGS)	$\
+	-static		    $\
+	-nostdlib	    $\
+	-Wl,-preload	$\
+	-Wl,-e,start    $\
+	-Wl,-order_file,./sym_order.txt 	$\
+	-Wl,-image_base,0x100000000	        $\
+	-Wl,-sectalign,__DATA,__common,0x8  $\
+	-Wl,-segalign,0x4000
 
 #
 ## [Core Targets]
 ##
-all: core $(IMAGE_BIN)
 
-core: $(COMPONENTS)
+all: $(COMPONENTS) $(CORE_TARGET)
+
 S3:
-	$(MAKE) -C $@ all
-kernel:
-	$(MAKE) -C $@ all
+	@echo "-> building [ $@ ]"
+	@$(MAKE) -C $@ all
+	@ln -Fs $(CURDIR)/$@/obj $(TARGET_PRODUCT_OUTPUT)/core/$@
 
-$(IMAGE_BIN):
-	$(CC) $(WFLAGS) $(IFLAGS) $(CFLAGS) $(DFLAGS) $(LFLAGS) $(call rwildcard,$(COMPONENTS),*.o) -o $@
+kernel:
+	@echo "-> building [ $@ ]"
+	@$(MAKE) -C $@ all
+	@ln -Fs $(CURDIR)/$@/obj $(TARGET_PRODUCT_OUTPUT)/core/$@
+
+$(CORE_TARGET):
+	$(CC) $(CFLAGS) $(sort $(IFLAGS) $(LFLAGS)) $(call rwildcard,$(COMPONENTS),*.o) $(wildcard ../../pongoOS/newlib/build/libc.a) -o $@
+	$(VMACHO) -f $@ $@.bin
 
 clean:
-	$(foreach comp,$(COMPONENTS),$(MAKE) -C $(comp) $@)
-	@rm -f $(IMAGE_BIN)
+	$(foreach comp,$(COMPONENTS),\
+		$(MAKE) -C $(comp) $@)
 
 
 ## META
-.PHONY: all core $(COMPONENTS) clean
 .POSIX:
+.PHONY: all $(COMPONENTS) clean
 .DEFAULT: all
+.NOTPARALLEL:

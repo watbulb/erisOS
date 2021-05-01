@@ -4,6 +4,7 @@
 
 export PRODUCT := ErisOS
 export TARGET_PRODUCT_OUTPUT := $(CURDIR)/build
+export TARGET_PRODUCT_BINARY := $(TARGET_PRODUCT_OUTPUT)/$(PRODUCT)
 
 COMPONENTS := \
 	core
@@ -14,26 +15,48 @@ COMPONENTS := \
 #
 ## [Default OS Component Compile Options]
 ##
-export CC     ?= $(shell xcrun -f clang)
-export ABI    ?= aapcs
-export ARCH   ?= arm64
-export CFLAGS ?= -fno-color-diagnostics -std=c17
-export WFLAGS ?= -Wall -Wpedantic -Wconversion 
+export SDK     ?= iphoneos
+export ABI     ?= aapcs
+export ARCH    ?= arm64
+export TARGET  ?= arm64-apple-ios13.5
+export SYSROOT ?= $(shell xcrun --sdk $(SDK) --show-sdk-path)
+export VMACHO  ?= ../../pongoOS/build/vmacho
+export CLANG   ?= $(shell xcrun --sdk $(SDK) -f clang)
 
+ifeq ($(SYSROOT),)
+$(error Could not find SDK $(SDK))
+else ifeq ($(VMACHO),)
+$(error Could not find VMACHO $(VMACHO))
+endif
 
-erisos: all
-ErisOS: all
+export CFLAGS ?= -std=c17 -mabi=$(ABI)
+export WFLAGS ?= -Wall -Wpedantic -Wconversion
+ifeq ($(DEBUG),1)
+export DFLAGS += -DDEBUG
+endif
+
+export CC := $(CLANG) -isysroot $(SYSROOT) -arch $(ARCH) --target=$(TARGET)
+
+# Project Wide Debug
+export DEBUG ?= 1
+
+#
+## [OS Components & Targets]
+##
+
 all: $(TARGET_PRODUCT_OUTPUT) $(COMPONENTS)
 
 $(TARGET_PRODUCT_OUTPUT):
-	mkdir -p $@
+	$(foreach comp,$(COMPONENTS),\
+		$(shell mkdir -p $@/$(comp)))
 
-#
-## [OS Components]
-##
 $(COMPONENTS): $(TARGET_PRODUCT_OUTPUT)
-	$(MAKE) -C $@
-	@mkdir -p $^/$@ && ln -s $(CURDIR)/$@/obj $^/$@
+	@echo "[ $@ ]"
+	@$(MAKE) -C $@ all
+
+tags:
+	ctags -R $(CURDIR) ../pongoOS/src ../pongoOS/include
+	ln -s ./tags ./.vscode/tags
 
 clean: $(TARGET_PRODUCT_OUTPUT)
 	$(foreach comp,$(COMPONENTS),\
@@ -44,3 +67,4 @@ clean: $(TARGET_PRODUCT_OUTPUT)
 ## META
 .POSIX:
 .DEFAULT: all
+.PHONY: all $(COMPONENTS) tags clean

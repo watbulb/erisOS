@@ -3,18 +3,9 @@
 #
 
 #
-## [Component Default General Options]
-##
-ABI  ?= aapcs
-ARCH ?= arm64
-AUTOBOOT      ?= 1
-USE_LIBC_STUB ?= 1
-
-
-#
 ## [Component Include]
 ##
-INC := include
+INC := $(CURDIR)/include
 
 
 #
@@ -24,7 +15,7 @@ C_SRCS := \
 	$(wildcard *.c)
 #   ... (extend as appropriate)
 #   ...
-C_SRCS := $(patsubst %.c,%.o,$(C_SRCS))
+C_SRCS := $(sort $(patsubst %.c,%.o,$(C_SRCS)))
 
 
 #
@@ -34,7 +25,7 @@ S_SRCS := \
 	$(wildcard asm/$(ARCH)/*.S)
 #   ... (extend as appropriate)
 #   ...
-S_SRCS := $(patsubst %.S,%.o,$(S_SRCS))
+S_SRCS := $(sort $(patsubst %.S,%.o,$(S_SRCS)))
 
 
 #
@@ -46,28 +37,13 @@ SRCS   := $(S_SRCS) $(C_SRCS)
 #
 ## [Component Compiler Options]
 ##
-OUTPUT := obj
+OUTPUT := $(CURDIR)/obj
 WFLAGS := $(WFLAGS)
-DFLAGS := $(DFLAGS) \
-	-DAUTOBOOT=$(AUTOBOOT) \
-	-DUSE_LIBC_STUB=$(USE_LIBC_STUB)
-CFLAGS := $(CFLAGS)	\
-	-O0		\
-	-arch $(ARCH)	\
-	-mabi=$(ABI)    \
-	-fno-builtin	\
-	-fno-common
-SFLAGS := $(SFLAGS) $(CFLAGS)
+DFLAGS := $(DFLAGS)
 IFLAGS := $(IFLAGS) -I$(INC)
-LFLAGS := $(LFLAGS)	\
-	-nostdlib	\
-	-nostdlibinc	\
-	-Wl,-preload	\
-	-Wl,-e,start    \
-	-Wl,-order_file,$(SRC)/sym_order.txt \
-	-Wl,-image_base,0x100000000	     \
-	-Wl,-sectalign,__DATA,__common,0x8   \
-	-Wl,-segalign,0x4000 		     \
+# ... CFLAGS
+# ... SFLAGS
+# (extend as appropriate)
 
 
 #
@@ -81,10 +57,10 @@ $(OUTPUT):
 		$(shell mkdir -p $@/$(subdir)))
 
 %.o: %.S | $(OUTPUT)
-	$(CC) $(SFLAGS) $(WFLAGS) $(IFLAGS) $(DFLAGS) -c $^ -o $(OUTPUT)/$@
+	 $(CC) $(WFLAGS) $(SFLAGS) $(IFLAGS) $(DFLAGS) -c $^ -o $(OUTPUT)/$@
 
 %.o: %.c | $(OUTPUT)
-	$(CC) $(CFLAGS) $(WFLAGS) $(IFLAGS) $(DFLAGS) -c $^ -o $(OUTPUT)/$@
+	 $(CC) $(WFLAGS) $(CFLAGS) $(IFLAGS) $(DFLAGS) -c $^ -o $(OUTPUT)/$@
 
 clean:
 	rm -rf $(OUTPUT)
@@ -92,4 +68,5 @@ clean:
 
 ## META
 .POSIX:
+.PHONY: all $(OUTPUT) clean
 .DEFAULT: all
