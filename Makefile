@@ -21,7 +21,7 @@ export ARCH    ?= arm64
 export TARGET  ?= arm64-apple-ios13.5
 export SYSROOT ?= $(shell xcrun --sdk $(SDK) --show-sdk-path)
 
-export VMACHO  ?= ../../pongoOS/build/vmacho
+export VMACHO  ?= $(CURDIR)/bin/vmacho
 export CLANG   ?= $(shell xcrun --sdk $(SDK) -f clang)
 
 ifeq ($(SYSROOT),)
