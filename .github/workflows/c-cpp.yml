@@ -13,5 +13,5 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
-    - name: make S3
-      run: make S3
+    - name: make core
+      run: make core
