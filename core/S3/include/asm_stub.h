@@ -12,6 +12,8 @@ smemcpy128(void *dst, void *src, uint32_t size);
 extern volatile void
 setup_el1(void *entrypoint, uint64_t boot_image, uint64_t boot_args);
 
+extern void
+invalidate_icache(void);
 
 /***********************************************
  * clearhook.S                                 *
@@ -20,7 +22,6 @@ setup_el1(void *entrypoint, uint64_t boot_image, uint64_t boot_args);
 #define kClearHookSize 2
 extern uint32_t clear_hook_orig_backing[kClearHookSize];
 extern uint8_t  clear_hook, clear_hook_end;
-
 
 /***********************************************
  * jump_to_image.S                             *

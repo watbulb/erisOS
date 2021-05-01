@@ -149,6 +149,14 @@ memset$continue:
     sub x2, x2, #1
     b memset$continue
 
+.globl _invalidate_icache
+_invalidate_icache: 
+    dsb ish
+    ic  iallu
+    dsb ish
+    isb
+    ret
+
 nullsub:
     ret
 

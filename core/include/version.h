@@ -1,1 +1,6 @@
+#ifndef ERISOS_VERSION_H
+#define ERISOS_VERSION_H
+
 #define VERSION 0.0.1
+
+#endif // ERISOS_VERSION_H
