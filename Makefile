@@ -20,6 +20,7 @@ export ABI     ?= aapcs
 export ARCH    ?= arm64
 export TARGET  ?= arm64-apple-ios13.5
 export SYSROOT ?= $(shell xcrun --sdk $(SDK) --show-sdk-path)
+
 export VMACHO  ?= ../../pongoOS/build/vmacho
 export CLANG   ?= $(shell xcrun --sdk $(SDK) -f clang)
 
@@ -55,8 +56,16 @@ $(COMPONENTS): $(TARGET_PRODUCT_OUTPUT)
 	@$(MAKE) -C $@ all
 
 tags:
-	ctags -R $(CURDIR) ../pongoOS/src ../pongoOS/include
-	ln -s ./tags ./.vscode/tags
+	@ctags -R \
+		core  \
+		../pongoOS/src ../pongoOS/include
+	@ln -fs ./tags ./.vscode/tags
+
+symbols: $(TARGET_PRODUCT_BINARY)
+	nm -S $^
+
+undef-symbols: $(TARGET_PRODUCT_BINARY)
+	nm -u $^
 
 clean: $(TARGET_PRODUCT_OUTPUT)
 	$(foreach comp,$(COMPONENTS),\
@@ -67,4 +76,4 @@ clean: $(TARGET_PRODUCT_OUTPUT)
 ## META
 .POSIX:
 .DEFAULT: all
-.PHONY: all $(COMPONENTS) tags clean
+.PHONY: all $(COMPONENTS) tags symbols undef-symbols clean
