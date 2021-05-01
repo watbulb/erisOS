@@ -1,0 +1,17 @@
+{
+    "makefile.extensionOutputFolder": "./.vscode",
+    "makefile.launchConfigurations": [
+        {
+            "cwd": "${workspaceFolder}",
+            "binaryPath": "${workspaceFolder}/build",
+            "binaryArgs": []
+        }
+    ],
+    "C_Cpp.default.configurationProvider": "ms-vscode.makefile-tools",
+    "C_Cpp.errorSquiggles": "Enabled",
+    "C_Cpp.intelliSenseEngineFallback": "Enabled",
+    "files.associations": {
+        "*.h": "c",
+        "cstdio": "c"
+    }
+}

@@ -1,4 +1,14 @@
+# Build Folders & In-Tree
 build/
 obj/
 
+# Ctags & Tools
+tags
+**/.clang
+.vscode/*
+!.vscode/tasks.json
+!.vscode/settings.json
+!.vscode/c_cpp_properties.json
+
+# APPL Shit
 .DS_Store
