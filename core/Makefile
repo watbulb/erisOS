@@ -1,23 +1,23 @@
 #
-## ErisOS Core
+## ErisOS Core Subassembly
 #
 rwildcard = $(foreach d,$(wildcard $(1:=/*)),$(call rwildcard,$d,$2) $(filter $(subst *,%,$2),$d))
 
 
 #
-## [Core Default General Options]
+## [Core Subassembly Default General Options]
 AUTOBOOT ?= 1
 USE_LIBC_STUB ?= 1
 
 
 #
-## [Core TARGET]
+## [Core Subassembly TARGET]
 ##
 CORE_TARGET ?= $(TARGET_PRODUCT_BINARY)
 
 
 #
-## [Core Components]
+## [Core Subassembly Components]
 ##
 COMPONENTS := \
 	S3
@@ -27,13 +27,15 @@ COMPONENTS := \
 
 
 #
-## [Core Include]
+## [Core Subassembly Include]
 ##
 INC := $(CURDIR)/include
+#	... (extend as appropriate)
+#	...
 
 
 #
-## [Core Compiler Options]
+## [Core Subassembly Compiler Options]
 ## [inherits parent & propogates newopts. down to components]
 ##
 export WFLAGS := $(WFLAGS)
@@ -58,7 +60,7 @@ LFLAGS := $(LFLAGS)	$\
 	-Wl,-segalign,0x4000
 
 #
-## [Core Targets]
+## [Core Subassembly Targets]
 ##
 
 all: $(COMPONENTS) $(CORE_TARGET)
