@@ -9,7 +9,7 @@
     ],
     "C_Cpp.default.configurationProvider": "ms-vscode.makefile-tools",
     "C_Cpp.errorSquiggles": "Enabled",
-    "C_Cpp.intelliSenseEngineFallback": "Enabled",
+    "C_Cpp.intelliSenseEngineFallback": "Disabled",
     "files.associations": {
         "*.h": "c",
         "cstdio": "c"
