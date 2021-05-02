@@ -1,9 +1,16 @@
 #include <stdint.h>
 
+#include "config.h"
+#include "common.h"
+
 #include "asm_stub.h"
 #include "libc_stub.h"
-#include "../../include/config.h"
-#include "../../include/common.h"
+
+#if ERISOS_ARM_RUNLEVEL == EL1_RUNLEVEL
+#include "kernel/entry.h"
+#else
+#error ARM RUNLEVEL NOT SUPPORTED
+#endif
 
 // /pexpert/pexpert/arm64/boot.h
 #define BOOT_LINE_LENGTH 608
@@ -58,8 +65,11 @@ void runtime_entry(
     uintptr_t *boot_args,
     uintptr_t *boot_entry_point);
 
-void jump_to_runlevel(void);
 void patch_bootloader(uintptr_t *boot_image);
-void setup_runlevel(uint8_t runlevel);
+void jump_to_runlevel(void);
+void setup_runlevel(uint8_t runlevel,
+    uintptr_t *__nullable boot_entrypoint,
+    uintptr_t *__nullable boot_args
+); 
 
 void trampoline_entry(uintptr_t *boot_image, uintptr_t *boot_args);

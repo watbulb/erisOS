@@ -1,9 +1,9 @@
 #
-## ErisOS Checkra1n Stage3 Component
+## ErisOS Core Kernel Component
 #
 
 #
-## [Component Include]
+## [Component Include (Extras)]
 ##
 INC :=
 

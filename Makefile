@@ -30,13 +30,17 @@ else ifeq ($(VMACHO),)
 $(error Could not find VMACHO $(VMACHO))
 endif
 
-export CFLAGS ?= -std=c17 -mabi=$(ABI)
-export WFLAGS ?= -Wall -Wpedantic -Wconversion
+export CFLAGS ?= -std=c99 -mabi=$(ABI)
+export WFLAGS ?= -Wall -Wextra -Wpedantic -Wconversion $\
+	-Wno-nullability-completeness $\
+	-Wno-nullability-extension
+
 ifeq ($(DEBUG),1)
 export DFLAGS += -DDEBUG
 endif
 
 export CC := $(CLANG) -isysroot $(SYSROOT) -arch $(ARCH) --target=$(TARGET)
+// export CC := /usr/bin/clang -isysroot $(SYSROOT) -arch $(ARCH) --target=$(TARGET)
 
 # Project Wide Debug
 export DEBUG ?= 1
@@ -52,7 +56,7 @@ $(TARGET_PRODUCT_OUTPUT):
 		$(shell mkdir -p $@/$(comp)))
 
 $(COMPONENTS): $(TARGET_PRODUCT_OUTPUT)
-	@echo "[ $@ ]"
+	@printf "\033[0m`tput bold`[ $@ ]`tput sgr0`"
 	@$(MAKE) -C $@ all
 
 tags:

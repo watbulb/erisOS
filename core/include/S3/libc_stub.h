@@ -6,7 +6,8 @@
 
 #undef strcpy
 __attribute__((noinline))
-static char *strcpy_(char *to, const char *from)
+char *
+strcpy_(char *to, const char *from)
 {
     char cur = 0;
     while ((cur = (*from++)))
@@ -17,10 +18,10 @@ static char *strcpy_(char *to, const char *from)
 }
 #define strcpy strcpy_
 
-
 #undef memcpy
 __attribute__((noinline))
-static const void *memcpy_(char *dst, char *src, register long n)
+const void *
+memcpy_(char *dst, char *src, register long n)
 {
     while (n)
     {
@@ -32,24 +33,24 @@ static const void *memcpy_(char *dst, char *src, register long n)
 }
 #define memcpy memcpy_
 
-
 #undef strcmp
-__attribute__((noinline))
-__unused static int strcmp_(const char *s1, const char *s2)
+__attribute__((noinline, unused))
+int
+strcmp_(const char *s1, const char *s2)
 {
     while (*s1 && (*s1 == *s2))
     {
         s1++;
         s2++;
     }
-    return (*(const unsigned char *)s1 - *(const unsigned char *)s2);
+    return *(const unsigned char *)s1 - *(const unsigned char *)s2;
 }
 #define strcmp strcmp_
 
-
 #undef strncmp
-__attribute__((noinline))
-__unused static int strncmp_(const char *s1, const char *s2, register size_t n)
+__attribute__((noinline, unused))
+int
+strncmp_(const char *s1, const char *s2, register size_t n)
 {
     register unsigned char u1, u2;
     while (n-- > 0)
@@ -65,10 +66,10 @@ __unused static int strncmp_(const char *s1, const char *s2, register size_t n)
 }
 #define strncmp strncmp_
 
-
 #undef strlen
-__attribute__((noinline))
-__unused static size_t strlen_(const char *str)
+__attribute__((noinline, unused))
+size_t
+strlen_(const char *str)
 {
     register size_t rv = 0;
     while (*str++)
@@ -77,10 +78,10 @@ __unused static size_t strlen_(const char *str)
 }
 #define strlen strlen_
 
-
 #undef strnlen
-__attribute__((noinline))
-__unused static size_t strnlen_(const char *s, register size_t n)
+__attribute__((noinline, unused))
+size_t
+strnlen_(const char *s, register size_t n)
 {
     register size_t len = 0;
     while (len < n && s[len] != 0)

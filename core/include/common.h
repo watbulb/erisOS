@@ -2,9 +2,11 @@
 #define ERISOS_COMMON_H
 
 #include <stdint.h>
+#include <stdbool.h>
 #include <stddef.h>
 // #include <stdio.h>
 
+static bool is_16k = false;
 static uintptr_t *gboot_args = NULL;
 static uintptr_t *gboot_entry_point = NULL;
 
