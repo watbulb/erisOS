@@ -17,7 +17,7 @@ void uart_pinmux_init(void)
 
 void uart_putc(char c) {
     if (c == '\n')
-        c  = '\r';
+        uart_putc('\r');
     do {
         __asm("nop");
     } while (!(rUTRSTAT0 & 0x04));
