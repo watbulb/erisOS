@@ -18,7 +18,7 @@ COMPONENTS := \
 export SDK     ?= iphoneos
 export ABI     ?= aapcs
 export ARCH    ?= arm64
-export TARGET  ?= arm64-apple-ios13.5
+export TARGET  ?= aarch64-none-darwin20.4.0
 export SYSROOT ?= $(shell xcrun --sdk $(SDK) --show-sdk-path)
 
 export VMACHO  ?= $(CURDIR)/bin/vmacho
@@ -49,15 +49,18 @@ export DEBUG ?= 1
 ## [OS Components & Targets]
 ##
 
-all: $(TARGET_PRODUCT_OUTPUT) $(COMPONENTS)
+all: $(TARGET_PRODUCT_OUTPUT) $(COMPONENTS) $(PRODUCT)
 
 $(TARGET_PRODUCT_OUTPUT):
 	$(foreach comp,$(COMPONENTS),\
 		$(shell mkdir -p $@/$(comp)))
 
+$(PRODUCT):
+	$(MAKE) -C core $@
+
 $(COMPONENTS): $(TARGET_PRODUCT_OUTPUT)
-	@printf "\033[0m`tput bold`[ $@ ]`tput sgr0`"
-	@$(MAKE) -C $@ all
+	$(info [ $@ ])
+	$(MAKE) -C $@ all
 
 tags:
 	@ctags -R \
@@ -74,10 +77,12 @@ undef-symbols: $(TARGET_PRODUCT_BINARY)
 clean: $(TARGET_PRODUCT_OUTPUT)
 	$(foreach comp,$(COMPONENTS),\
 		$(MAKE) -C $(comp) $@)
-	rm -rf $^
+	$(foreach comp,$(COMPONENTS),\
+		rm -rf $^/$(comp))
+	rm -f $^/$(PRODUCT)*
 
 
 ## META
 .POSIX:
 .DEFAULT: all
-.PHONY: all $(COMPONENTS) tags symbols undef-symbols clean
+.PHONY: all $(TARGET_PRODUCT_OUTPUT) $(PRODUCT) $(COMPONENTS) tags symbols undef-symbols clean

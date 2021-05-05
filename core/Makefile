@@ -16,7 +16,7 @@ USE_LIBC_STUB ?= 1
 #
 ## [Core Subassembly TARGET]
 ##
-CORE_TARGET ?= $(TARGET_PRODUCT_BINARY)
+CORE_TARGET ?= $(PRODUCT)
 
 
 #
@@ -64,25 +64,29 @@ LFLAGS := $(LFLAGS)	$\
 ## [Core Subassembly Targets]
 ##
 
-all: $(COMPONENTS) $(CORE_TARGET)
+all: $(COMPONENTS)
 
 S3:
 	$(info )
 	$(info [ $@ ])
 	$(info )
 	@$(MAKE) -C $@ all
-	@ln -fs $(CURDIR)/$@/obj $(TARGET_PRODUCT_OUTPUT)/core/$@
+	@# Symlink Component Object Folder to Build Root
+	@rm -f $(TARGET_PRODUCT_OUTPUT)/core/$@
+	@ln -s $(CURDIR)/$@/obj $(TARGET_PRODUCT_OUTPUT)/core/$@ || :
 
 kernel:
 	$(info )
 	$(info [ $@ ])
 	$(info )
-	@$(MAKE) -C $@ all
-	@ln -fs $(CURDIR)/$@/obj $(TARGET_PRODUCT_OUTPUT)/core/$@
+	@$(MAKE) -C $@ clean all
+	@# Symlink Component Object Folder to Build Root
+	@rm -f $(TARGET_PRODUCT_OUTPUT)/core/$@
+	@ln -s core/$@/obj $(TARGET_PRODUCT_OUTPUT)/core/$@ || :
 
 $(CORE_TARGET):
-	$(CC) $(CFLAGS) $(sort $(IFLAGS) $(LFLAGS)) $(sort $(call rwildcard,$(COMPONENTS),*.o) $(wildcard ../../pongoOS/newlib/build/libc.a)) -o $@
-	$(VMACHO) -f $@ $@.bin
+	$(CC) $(CFLAGS) $(sort $(IFLAGS) $(LFLAGS)) $(sort $(call rwildcard,$(COMPONENTS),*.o) $(TARGET_PRODUCT_OUTPUT)/lib/libc.a) -o $(TARGET_PRODUCT_BINARY)
+	$(VMACHO) -f $(TARGET_PRODUCT_BINARY) $(TARGET_PRODUCT_BINARY).bin
 
 clean:
 	$(foreach comp,$(COMPONENTS),\
@@ -91,6 +95,6 @@ clean:
 
 ## META
 .POSIX:
-.PHONY: all $(COMPONENTS) clean
+.PHONY: all $(COMPONENTS) $(CORE_TARGET) clean
 .DEFAULT: all
 .NOTPARALLEL:
