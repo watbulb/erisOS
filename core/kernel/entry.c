@@ -14,7 +14,7 @@
 #include "kernel/mmio.h"
 #include "kernel/uart.h"
 
-void kernel_entry(uintptr_t *boot_args, uintptr_t *boot_entrypoint) {
+void kernel_entry(__unused uintptr_t *boot_args, __unused uintptr_t *boot_entrypoint) {
     is_16k = check_is_16k();
     // TODO: pass is_16k down to mmu layer
 
@@ -25,7 +25,7 @@ void kernel_entry(uintptr_t *boot_args, uintptr_t *boot_entrypoint) {
 
     // Welcome
     disable_interrupts();
-    uart_puts("\nErisOS (Version: " VERSION ")\n");
+    uart_puts("ErisOS (Version: " VERSION ")\n");
     enable_interrupts();
 
     /*

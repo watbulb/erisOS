@@ -196,7 +196,7 @@ void trampoline_entry(uintptr_t *boot_image, uintptr_t *boot_args)
     {
         strcpy((char *)boot_image + 0x200, "Stage 2 ErisOS Loader");
         patch_bootloader(boot_image);
-    } else {
+    } else { // Entry (1) if not boot_args else Entry (2)
         setup_runlevel(ERISOS_ARM_RUNLEVEL, boot_image, boot_args);
     }
 }
